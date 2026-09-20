@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 
 export default function NotFound() {
-  const [errMsg, setErrMsg] = useState({
+  const [errMsg] = useState({
     pageTitle: "404!!!",
     pageSubTitle: "The page or route you are looking for does not exists",
   });
