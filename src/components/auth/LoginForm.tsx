@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import TextInputComponent from "../ui/form/InputComponent";
 import Button from "../ui/button/Button";
 import { useEffect, useState, type BaseSyntheticEvent } from "react";
+import{useForm} from "react-hook-form"
 
 type CredentialsType = {
   username: string;
@@ -9,6 +10,11 @@ type CredentialsType = {
 };
 
 export default function LoginForm() {
+  const{control}=useForm({
+    defaultValues:{
+      username:"", password:""
+    }
+  })
   const [credentials, setCredentials] = useState<CredentialsType>({
     username: "",
     password: "",
