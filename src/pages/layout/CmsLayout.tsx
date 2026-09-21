@@ -64,13 +64,13 @@ function CmsHeader() {
           <div className="flex items-center gap-4">
             <button
               type="button"
-              className="rounded-lg p-2 text-slate-500 transition hover:bg-indigo-50 hover:text-indigo-600"
+              className="rounded-lg p-2 text-slate-500 transition hover:bg-indigo-50 hover:text-indigo-600 hover:scale-150"
             >
               🔔
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-full bg-indigo-100 font-medium text-indigo-600">
+              <div className="flex size-9 items-center justify-center rounded-full bg-indigo-100 font-medium text-indigo-600 hover:scale-150 transation  hover:text-indigo-50">
                 SK
               </div>
 
