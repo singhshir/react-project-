@@ -1,87 +1,90 @@
 import { Link } from "react-router";
 import TextInputComponent from "../ui/form/InputComponent";
 import Button from "../ui/button/Button";
-import { useEffect, useState, type BaseSyntheticEvent } from "react";
-import{useForm} from "react-hook-form"
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
-import * as z from "zod"
-const LoginSchema =z.object({
-  username: z.email("Invalid mail format").nonempty("Email is required").nonoptional("Email field is expected"),
-  password: z.string("").nonempty("Password is required").nonoptional("Password field is expected"),
-})
-type CredentialsType = {
-  username: string;
-  password: string;
-};
+// Zod schema
+const LoginSchema = z.object({
+  username: z
+    .string()
+    .min(1, "Email is required"),
+
+  password: z
+    .string()
+    .min(1, "Password is required"),
+});
+
+// Get TypeScript type from Zod schema
+type CredentialsType = z.infer<typeof LoginSchema>;
 
 export default function LoginForm() {
-
-  const [credentials, setCredentials] = useState<CredentialsType>({
-    username: "",
-    password: "",
-  });
-
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const handleLoginSubmit = (e: BaseSyntheticEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-  };
-
-  useEffect(() => {
-    console.log("This effect runs in every render", isSubmitting);
-
-    return () => {
-      setIsSubmitting;
-    };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CredentialsType>({
+    resolver: zodResolver(LoginSchema),
   });
 
-  useEffect(() => {
-    console.log("This effect runs only once when we render for the first time");
-  }, []);
+  const handleLoginSubmit = (data: CredentialsType) => {
+    console.log("Validated data:", data);
 
-  useEffect(() => {
-    console.log("This effect runs on every time it'd dependency is called");
-  }, [isSubmitting]);
+    setIsSubmitting(true);
 
-  const handleInputChange = (e: BaseSyntheticEvent) => {
-    const { name, value } = e.target;
-    console.log(value);
-    setCredentials({
-      ...credentials,
-      [name]: value,
-    });
+    // API call will go here later
   };
 
   return (
     <>
       <form
-        onSubmit={handleLoginSubmit}
+        onSubmit={handleSubmit(handleLoginSubmit)}
         className="w-full flex flex-col gap-5 py-5"
       >
-        <TextInputComponent
-          label={"Username:"}
-          type={"username"}
-          placeholder={"Enter your username"}
-          name={"username"}
-          onChange={handleInputChange}
-        ></TextInputComponent>
+        {/* Username */}
+        <div>
+          <TextInputComponent
+            label="Username:"
+            type="email"
+            placeholder="Enter your email"
+            {...register("username")}
+          />
 
-        <TextInputComponent
-          label={"Password:"}
-          type={"password"}
-          placeholder={"Enter your password"}
-          name={"password"}
-          onChange={handleInputChange}
-        ></TextInputComponent>
+          {errors.username && (
+            <p className="text-red-500 text-sm mt-1">
+              {errors.username.message}
+            </p>
+          )}
+        </div>
+
+        {/* Password */}
+        <div>
+          <TextInputComponent
+            label="Password:"
+            type="password"
+            placeholder="Enter your password"
+            {...register("password")}
+          />
+
+          {errors.password && (
+            <p className="text-red-500 text-sm mt-1">
+              {errors.password.message}
+            </p>
+          )}
+        </div>
 
         <div className="w-full flex items-center justify-end">
           <div className="w-full">
             <p>
-              By signing in, you agree with
-              <Link to="/privacy-policy" className="text-teal-600 underline">
-                {" "}
+              By signing in, you agree with{" "}
+              <Link
+                to="/privacy-policy"
+                className="text-teal-600 underline"
+              >
                 Privacy policy
               </Link>{" "}
               &{" "}
@@ -93,6 +96,7 @@ export default function LoginForm() {
               </Link>
             </p>
           </div>
+
           <Link
             to="/forget-password"
             className="text-sm italic text-teal-600 underline hover:scale-103 transition duration-300"
@@ -100,25 +104,23 @@ export default function LoginForm() {
             Forget-Password
           </Link>
         </div>
+
         <div className="w-full flex justify-between">
           <Button
-            buttonName={"Cancel"}
-            type={"reset"}
-            className={"bg-red-600 hover:bg-red-700 text-white"}
+            buttonName="Cancel"
+            type="reset"
+            className="bg-red-600 hover:bg-red-700 text-white"
             disabled={isSubmitting}
-          ></Button>
+          />
 
-          <Link to="/cms" className="w-full flex justify-between">
-            <Button
-              buttonName={"Submit"}
-              type={"submit"}
-              className={"bg-green-600 hover:bg-green-700 text-white"}
-              disabled={isSubmitting}
-            ></Button>
-          </Link>
+          <Button
+            buttonName="Submit"
+            type="submit"
+            className="bg-green-600 hover:bg-green-700 text-white"
+            disabled={isSubmitting}
+          />
         </div>
       </form>
     </>
   );
 }
- 
