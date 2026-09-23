@@ -3,18 +3,20 @@ import TextInputComponent from "../ui/form/InputComponent";
 import Button from "../ui/button/Button";
 import { useEffect, useState, type BaseSyntheticEvent } from "react";
 import{useForm} from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod";
 
+import * as z from "zod"
+const LoginSchema =z.object({
+  username: z.email("Invalid mail format").nonempty("Email is required").nonoptional("Email field is expected"),
+  password: z.string("").nonempty("Password is required").nonoptional("Password field is expected"),
+})
 type CredentialsType = {
   username: string;
   password: string;
 };
 
 export default function LoginForm() {
-  const{control}=useForm({
-    defaultValues:{
-      username:"", password:""
-    }
-  })
+
   const [credentials, setCredentials] = useState<CredentialsType>({
     username: "",
     password: "",
