@@ -6,7 +6,7 @@ import RouterConfig from "./lib/router/RouterConfig";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-     <CursorTrail />
+  
       <RouterConfig />
     
   </StrictMode>,
