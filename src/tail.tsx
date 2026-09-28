@@ -156,7 +156,7 @@ export default function FlowingLight() {
   }, []);
 
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden z-[9999]">
+    <div className="fixed inset-0 pointer-events-none overflow-hidden ">
       {/* =========================
           FLOWING TRAIL
       ========================== */}
