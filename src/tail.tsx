@@ -157,9 +157,7 @@ export default function FlowingLight() {
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden ">
-      {/* =========================
-          FLOWING TRAIL
-      ========================== */}
+      
       {trail.map((p) => {
         const age = performance.now() - p.bornAt;
         const lifeFrac = Math.max(0, 1 - age / TRAIL_LIFE);
@@ -183,9 +181,7 @@ export default function FlowingLight() {
         );
       })}
 
-      {/* =========================
-          FLOATING PARTICLES
-      ========================== */}
+     
       {particles.map((p) => {
         const age = performance.now() - p.bornAt;
         const t = age / p.life;
