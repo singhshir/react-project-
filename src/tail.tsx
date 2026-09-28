@@ -1,219 +1,213 @@
 import { useEffect, useRef, useState } from "react";
 
-interface SlashMark {
+interface TrailPoint {
   id: string;
   x: number;
   y: number;
-  length: number;
-  angle: number;
-  width: number;
-  phase: "black" | "red" | "healing";
+  hue: number;
+  bornAt: number;
 }
 
-interface Spark {
+interface Particle {
   id: string;
   x: number;
   y: number;
+  vx: number;
+  vy: number;
   size: number;
-  angle: number;
-  distance: number;
+  hue: number;
+  phase: number;
+  life: number;
+  bornAt: number;
 }
 
-export default function ScreenSlash() {
-  const [slashes, setSlashes] = useState<SlashMark[]>([]);
-  const [sparks, setSparks] = useState<Spark[]>([]);
+// ---- tunable timings ----
+const TRAIL_LIFE = 650; // ms a ribbon segment lives
+const PARTICLE_LIFE_MIN = 1600; // ms
+const PARTICLE_LIFE_MAX = 3200; // ms
+const AMBIENT_INTERVAL = 140; // ms between idle "floating" embers
+const HUE_SPEED = 0.015; // how fast the flow color drifts
+
+export default function FlowingLight() {
+  const [trail, setTrail] = useState<TrailPoint[]>([]);
+  const [particles, setParticles] = useState<Particle[]>([]);
 
   const lastPos = useRef({ x: 0, y: 0 });
+  const pointer = useRef<{ x: number; y: number } | null>(null);
   const initialized = useRef(false);
+  const lastAmbient = useRef(0);
+  const rafId = useRef<number>();
+
+  const hueNow = (t: number) => (t * HUE_SPEED) % 360;
+
+  const spawnParticles = (x: number, y: number, speed: number) => {
+    const count = Math.min(1 + Math.floor(speed / 12), 5);
+    const baseHue = hueNow(performance.now());
+
+    const newParticles: Particle[] = Array.from({ length: count }).map((_, i) => {
+      const angle = Math.random() * Math.PI * 2;
+      const r = Math.random() * 6;
+      const id = `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}`;
+      return {
+        id,
+        x: x + Math.cos(angle) * r,
+        y: y + Math.sin(angle) * r,
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: -(0.25 + Math.random() * 0.5),
+        size: 1.5 + Math.random() * 2.5,
+        hue: (baseHue + Math.random() * 40 - 20 + 360) % 360,
+        phase: Math.random() * Math.PI * 2,
+        life: PARTICLE_LIFE_MIN + Math.random() * (PARTICLE_LIFE_MAX - PARTICLE_LIFE_MIN),
+        bornAt: performance.now(),
+      };
+    });
+
+    setParticles((prev) => [...prev.slice(-150), ...newParticles]);
+    newParticles.forEach((p) => {
+      setTimeout(() => {
+        setParticles((prev) => prev.filter((pp) => pp.id !== p.id));
+      }, p.life);
+    });
+  };
+
+  const spawnAmbientParticle = (x: number, y: number) => {
+    const baseHue = hueNow(performance.now());
+    const id = `amb-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const life = PARTICLE_LIFE_MIN + Math.random() * (PARTICLE_LIFE_MAX - PARTICLE_LIFE_MIN);
+
+    const p: Particle = {
+      id,
+      x: x + (Math.random() - 0.5) * 10,
+      y: y + (Math.random() - 0.5) * 10,
+      vx: (Math.random() - 0.5) * 0.2,
+      vy: -(0.15 + Math.random() * 0.25),
+      size: 1 + Math.random() * 1.8,
+      hue: (baseHue + Math.random() * 30 - 15 + 360) % 360,
+      phase: Math.random() * Math.PI * 2,
+      life,
+      bornAt: performance.now(),
+    };
+
+    setParticles((prev) => [...prev.slice(-150), p]);
+    setTimeout(() => {
+      setParticles((prev) => prev.filter((pp) => pp.id !== id));
+    }, life);
+  };
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const { clientX: x, clientY: y } = e;
-
-      // Prevent the first mouse movement from creating
-      // a giant slash from (0, 0)
+    const handleMove = (x: number, y: number) => {
       if (!initialized.current) {
         lastPos.current = { x, y };
+        pointer.current = { x, y };
         initialized.current = true;
         return;
       }
 
       const dx = x - lastPos.current.x;
       const dy = y - lastPos.current.y;
-
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      // Ignore very small movements
-      if (distance > 12) {
-        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-        const id =
-          Math.random().toString(36).substring(2, 9) +
-          Date.now().toString(36);
-
-        const slash: SlashMark = {
+      if (distance > 2) {
+        const id = Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+        const point: TrailPoint = {
           id,
-          x: lastPos.current.x,
-          y: lastPos.current.y,
-          length: Math.min(distance + 12, 140),
-          angle,
-          width: Math.min(3 + distance / 20, 7),
-          phase: "black",
+          x,
+          y,
+          hue: hueNow(performance.now()),
+          bornAt: performance.now(),
         };
 
-        setSlashes((prev) => [...prev.slice(-35), slash]);
-
-        // Create sparks around the end of the slash
-        const newSparks: Spark[] = Array.from({
-          length: distance > 40 ? 3 : 1,
-        }).map((_, index) => ({
-          id: `${id}-spark-${index}`,
-          x: x,
-          y: y,
-          size: Math.random() * 3 + 1,
-          angle: Math.random() * 360,
-          distance: Math.random() * 25 + 10,
-        }));
-
-        setSparks((prev) => [...prev.slice(-60), ...newSparks]);
-
-        // BLACK → RED
+        setTrail((prev) => [...prev.slice(-200), point]);
         setTimeout(() => {
-          setSlashes((prev) =>
-            prev.map((s) =>
-              s.id === id ? { ...s, phase: "red" } : s
-            )
-          );
-        }, 450);
+          setTrail((prev) => prev.filter((t) => t.id !== id));
+        }, TRAIL_LIFE);
 
-        // RED → HEALING
-        setTimeout(() => {
-          setSlashes((prev) =>
-            prev.map((s) =>
-              s.id === id ? { ...s, phase: "healing" } : s
-            )
-          );
-        }, 2600);
-
-        // Remove slash
-        setTimeout(() => {
-          setSlashes((prev) =>
-            prev.filter((s) => s.id !== id)
-          );
-        }, 3300);
-
-        // Remove sparks
-        setTimeout(() => {
-          setSparks((prev) =>
-            prev.filter((s) => !s.id.startsWith(id))
-          );
-        }, 700);
+        spawnParticles(x, y, distance);
       }
 
       lastPos.current = { x, y };
+      pointer.current = { x, y };
+    };
+
+    const handleMouseMove = (e: MouseEvent) => handleMove(e.clientX, e.clientY);
+    const handleTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (t) handleMove(t.clientX, t.clientY);
     };
 
     window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+
+    // ambient trickle so it keeps floating even when the cursor rests
+    const tick = (now: number) => {
+      if (pointer.current && now - lastAmbient.current > AMBIENT_INTERVAL) {
+        lastAmbient.current = now;
+        spawnAmbientParticle(pointer.current.x, pointer.current.y);
+      }
+      rafId.current = requestAnimationFrame(tick);
+    };
+    rafId.current = requestAnimationFrame(tick);
 
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("touchmove", handleTouchMove);
+      if (rafId.current) cancelAnimationFrame(rafId.current);
     };
   }, []);
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-[9999]">
-
       {/* =========================
-          SLASHES
+          FLOWING TRAIL
       ========================== */}
-      {slashes.map((slash) => {
-        let style =
-          "bg-black opacity-100 shadow-none";
-
-        if (slash.phase === "red") {
-          style =
-            "bg-red-600 opacity-95 shadow-[0_0_6px_rgba(255,0,0,0.9),0_0_18px_rgba(220,38,38,0.7)]";
-        }
-
-        if (slash.phase === "healing") {
-          style =
-            "bg-red-500 opacity-0 shadow-none";
-        }
+      {trail.map((p) => {
+        const age = performance.now() - p.bornAt;
+        const lifeFrac = Math.max(0, 1 - age / TRAIL_LIFE);
+        const width = 2 + lifeFrac * 10;
 
         return (
           <div
-            key={slash.id}
-            className={`
-              absolute origin-left
-              rounded-full
-              transition-all
-              ease-out
-              duration-700
-              will-change-[transform,opacity,width,height]
-              ${style}
-            `}
+            key={p.id}
+            className="absolute rounded-full transition-all ease-out duration-500 will-change-[transform,opacity,width,height]"
             style={{
-              left: slash.x,
-              top: slash.y,
-              width:
-                slash.phase === "healing"
-                  ? slash.length + 15
-                  : slash.length,
-              height:
-                slash.phase === "black"
-                  ? slash.width
-                  : slash.phase === "red"
-                  ? slash.width + 1
-                  : 1,
-              transform: `rotate(${slash.angle}deg)`,
+              left: p.x,
+              top: p.y,
+              width,
+              height: width,
+              transform: "translate(-50%, -50%)",
+              background: `radial-gradient(circle, hsla(${p.hue},95%,70%,${lifeFrac}) 0%, hsla(${p.hue},95%,60%,0) 70%)`,
+              opacity: lifeFrac,
+              boxShadow: `0 0 ${10 * lifeFrac}px hsla(${p.hue},95%,60%,${lifeFrac})`,
             }}
-          >
-            {/* White-hot core */}
-            {slash.phase === "red" && (
-              <div
-                className="
-                  absolute
-                  left-0
-                  top-1/2
-                  -translate-y-1/2
-                  w-full
-                  h-[1px]
-                  bg-white
-                  opacity-80
-                "
-              />
-            )}
-          </div>
+          />
         );
       })}
 
       {/* =========================
-          SPARKS
+          FLOATING PARTICLES
       ========================== */}
-      {sparks.map((spark) => {
-        const radians = (spark.angle * Math.PI) / 180;
+      {particles.map((p) => {
+        const age = performance.now() - p.bornAt;
+        const t = age / p.life;
+        const fade = Math.max(0, 1 - t);
+        const drift = age * 0.004 + p.phase;
 
-        const endX =
-          spark.x + Math.cos(radians) * spark.distance;
-
-        const endY =
-          spark.y + Math.sin(radians) * spark.distance;
+        const x = p.x + p.vx * age * 0.06 + Math.sin(drift) * 6;
+        const y = p.y + p.vy * age * 0.06 - (age * age) * 0.00002;
+        const size = p.size * (1 - t * 0.5);
 
         return (
           <div
-            key={spark.id}
-            className="
-              absolute
-              rounded-full
-              bg-red-500
-              shadow-[0_0_8px_rgba(239,68,68,0.9)]
-              animate-ping
-            "
+            key={p.id}
+            className="absolute rounded-full"
             style={{
-              left: endX,
-              top: endY,
-              width: spark.size,
-              height: spark.size,
+              left: x,
+              top: y,
+              width: size * 3,
+              height: size * 3,
+              transform: "translate(-50%, -50%)",
+              background: `radial-gradient(circle, hsla(${p.hue},100%,85%,${fade}) 0%, hsla(${p.hue},95%,60%,0) 75%)`,
+              boxShadow: `0 0 ${6 * fade}px hsla(${p.hue},95%,70%,${fade})`,
             }}
           />
         );
