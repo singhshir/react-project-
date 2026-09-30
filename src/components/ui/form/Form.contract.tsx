@@ -1,4 +1,5 @@
 import type { BaseSyntheticEvent, ReactNode } from "react"
+import type { Control, FieldValues, Path } from "react-hook-form"
 
 
 export type FormLabelPropsType = Readonly<{
@@ -7,13 +8,14 @@ export type FormLabelPropsType = Readonly<{
         children: ReactNode
     }>
 
-export type TextInputComponentPropsType = Readonly<{
+export type TextInputComponentPropsType<T extends FieldValues> = Readonly<{
     htmlFor?: string, 
     label: ReactNode,
     type?: string, 
-    name:string, 
+    name:Path<T>, 
     placeholder?: string, 
     labelClass?: string, 
-    inputClass?: string
-    onChange: (e:BaseSyntheticEvent) => void
+    inputClass?: string,
+    control: Control<T>,
+    errMsg?: string
 }>

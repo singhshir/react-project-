@@ -1,41 +1,36 @@
 import { Link } from "react-router";
 import TextInputComponent from "../ui/form/InputComponent";
 import Button from "../ui/button/Button";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import axiosClient from "../../lib/services/HttpService";
 
 // Zod schema
 const LoginSchema = z.object({
-  username: z
-    .string()
-    .min(1, "Email is required")
-,
-
-  password: z
-    .string()
-    .min(1, "Password is required"),
+  username: z.string().min(1, "Email is required"),
+  password: z.string().min(1, "Password is required"),
 });
 
 // Get TypeScript type from Zod schema
 type CredentialsType = z.infer<typeof LoginSchema>;
 
 export default function LoginForm() {
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
   const {
-    register,
+    control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<CredentialsType>({
     resolver: zodResolver(LoginSchema),
   });
 
-  const handleLoginSubmit = (data: CredentialsType) => {
-    console.log("Validated data:", data);
-
-    setIsSubmitting(true);
+  const handleLoginSubmit = async (data: CredentialsType) => {
+    try {
+      const detail = await axiosClient.post("/auth/login", data);
+      console.log({ detail: detail.data });
+    } catch (exception) {
+      console.log({ exception });
+    }
 
     // API call will go here later
   };
@@ -49,26 +44,24 @@ export default function LoginForm() {
         {/* Username */}
         <div>
           <TextInputComponent
+            control={control}
+            errMsg={errors?.username?.message}
+            name={"username"}
             label="Username:"
-            type="email"
+            type="text"
             placeholder="Enter your email"
-            {...register("username")}
           />
-
-          {errors.username && (
-            <p className="text-red-500 text-sm mt-1">
-              {errors.username.message}
-            </p>
-          )}
         </div>
 
         {/* Password */}
         <div>
           <TextInputComponent
+            control={control}
+            errMsg={errors?.password?.message}
+            name={"password"}
             label="Password:"
             type="password"
             placeholder="Enter your password"
-            {...register("password")}
           />
 
           {errors.password && (
@@ -82,10 +75,7 @@ export default function LoginForm() {
           <div className="w-full">
             <p>
               By signing in, you agree with{" "}
-              <Link
-                to="/privacy-policy"
-                className="text-teal-600 underline"
-              >
+              <Link to="/privacy-policy" className="text-teal-600 underline">
                 Privacy policy
               </Link>{" "}
               &{" "}

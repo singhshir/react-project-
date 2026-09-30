@@ -1,72 +1,122 @@
 import { Link } from "react-router";
 import TextInputComponent from "../ui/form/InputComponent";
 import Button from "../ui/button/Button";
-import { useState, type BaseSyntheticEvent } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import axiosClient from "../../lib/services/HttpService";
 
-type CredentialsType = {
-  username: string;
-  password: string;
-};
+const SignupSchema = z.object({
+  // name: z.string().min(1, "Name is required"),
+  // email: z.string().min(1, "Email is required"),
+  // phone: z.string().min(1, "Phone is required"),
+  // password: z.string().min(1, "Password is required"),
+  // confirmPassword: z.string().min(1, "Password is required"),
+  firstName: z.string().min(1, "First Name is required"),
+  lastName: z.string().min(1, "last Name is required"),
+  age: z.string().min(1, "Age is required"),
+});
+
+ 
+
+type CredentialsType = z.infer<typeof SignupSchema>;
 
 export default function SignupForm() {
-  const [credentials, setCredentials] = useState<CredentialsType>({
-    username: "",
-    password: "",
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<CredentialsType>({
+    resolver: zodResolver(SignupSchema),
   });
 
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const handleSignupSubmit = async (data: CredentialsType) => {
+    try {
+      const detail = await axiosClient.post("users/add", data);
+      console.log({ detail: detail.data });
+    } catch (exception) {
+      console.log({ exception });
+    }
 
-  const handleLoginSubmit = (e: BaseSyntheticEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-  };
-
-  const handleInputChange = (e: BaseSyntheticEvent) => {
-    const { name, value } = e.target;
-    console.log(value);
-    setCredentials({
-      ...credentials,
-      [name]: value,
-    });
   };
 
   return (
     <>
       <form
-        onSubmit={handleLoginSubmit}
+        onSubmit={handleSubmit(handleSignupSubmit)}
         className="w-full flex flex-col gap-5 py-5"
       >
         <TextInputComponent
-          label={"Name:"}
+          control={control}
+          errMsg={errors?.firstName?.message}
+          name={"firstName"}
+          label={"First Name:"}
           type={"text"}
-          placeholder={"Enter your Name"}
-          name={"name"}
-          onChange={handleInputChange}
+          placeholder={"Enter your First Name"}
         ></TextInputComponent>
 
         <TextInputComponent
+          control={control}
+          errMsg={errors?.lastName?.message}
+          name={"lastName"}
+          label={"Last Name:"}
+          type={"text"}
+          placeholder={"Enter your Last Name"}
+        ></TextInputComponent>
+
+        <TextInputComponent
+          control={control}
+          errMsg={errors?.age?.message}
+          name={"age"}
+          label={"Age:"}
+          type={"string"}
+          placeholder={"Enter your Age"}
+        ></TextInputComponent>
+
+        {/* <TextInputComponent
+          control={control}
+          errMsg={errors?.name?.message}
+          name={"name"}
+          label={"Name:"}
+          type={"text"}
+          placeholder={"Enter your Name"}
+        ></TextInputComponent>
+
+        <TextInputComponent
+          control={control}
+          errMsg={errors?.email?.message}
           label={"Email:"}
           type={"email"}
           placeholder={"Enter your email"}
           name={"email"}
-          onChange={handleInputChange}
         ></TextInputComponent>
 
         <TextInputComponent
+          control={control}
+          errMsg={errors?.phone?.message}
           label={"Phone:"}
           type={"text"}
           placeholder={"Enter your phone"}
           name={"phone"}
-          onChange={handleInputChange}
         ></TextInputComponent>
 
         <TextInputComponent
+          control={control}
+          errMsg={errors?.password?.message}
           label={"Password:"}
           type={"password"}
           placeholder={"Enter your Password"}
           name={"password"}
-          onChange={handleInputChange}
         ></TextInputComponent>
+
+        <TextInputComponent
+          control={control}
+          errMsg={errors?.confirmPassword?.message}
+          name={"confirmPassword"}
+          label={"Confirm Password:"}
+          type={"password"}
+          placeholder={"Enter password again"}
+        ></TextInputComponent> */}
 
         <div className="w-full flex items-center justify-end">
           <div className="w-full">
@@ -103,13 +153,15 @@ export default function SignupForm() {
         </div>
 
         <div className="flex justify-center">
-          <p>Already have an account? <Link
-            to="/"
-            className="text-sm italic text-teal-600 underline hover:scale-103 transition duration-300"
-          >
-            Login
-          </Link></p>
-          
+          <p>
+            Already have an account?{" "}
+            <Link
+              to="/"
+              className="text-sm italic text-teal-600 underline hover:scale-103 transition duration-300"
+            >
+              Login
+            </Link>
+          </p>
         </div>
       </form>
     </>
