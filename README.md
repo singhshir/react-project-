@@ -77,6 +77,3 @@ export default defineConfig([
 
 ```
 ....
-today i did not do any thing 
-another day of not doing any thing 
-fine this is good for me to this 
